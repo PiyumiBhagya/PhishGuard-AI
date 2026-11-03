@@ -38,3 +38,30 @@ def test_batch():
     r = client.post("/predict/batch", json={"urls": ["https://github.com", "http://192.168.1.5/login"]})
     assert r.status_code == 200
     assert len(r.json()["results"]) == 2
+
+
+def test_prediction_is_logged_and_feedback_accepted():
+    r = client.post("/predict", json={"url": "https://www.bbc.co.uk/news"})
+    rid = r.json()["request_id"]
+    fb = client.post("/feedback", json={"request_id": rid, "true_label": 0})
+    assert fb.status_code == 200
+    stats = client.get("/stats").json()
+    assert stats["total_predictions"] >= 1
+    assert stats["labeled"] >= 1
+
+
+def test_feedback_unknown_request_id():
+    r = client.post("/feedback", json={"request_id": "does-not-exist", "true_label": 1})
+    assert r.status_code == 404
+
+
+def test_feedback_rejects_bad_label():
+    r = client.post("/feedback", json={"request_id": "x", "true_label": 2})
+    assert r.status_code == 422
+
+
+def test_batch_is_logged():
+    before = client.get("/stats").json()["total_predictions"]
+    client.post("/predict/batch", json={"urls": ["https://github.com", "http://192.168.1.5/login"]})
+    after = client.get("/stats").json()["total_predictions"]
+    assert after == before + 2
