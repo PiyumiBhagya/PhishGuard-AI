@@ -1,20 +1,20 @@
 {
   "model_version": "v1",
-  "feature_set": "host_only",
-  "trained_at": "2026-11-03T02:45:26.024351+00:00",
+  "feature_set": "registered_domain",
+  "trained_at": "2026-11-03T07:01:10.698678+00:00",
   "metrics": {
-    "val_accuracy": 0.8294743528664443,
-    "val_precision": 0.9209282337773957,
-    "val_recall": 0.5716699270851858,
-    "val_f1": 0.7054369890821309,
-    "val_roc_auc": 0.8639636149718142,
-    "val_pr_auc": 0.841886674115617,
-    "test_accuracy": 0.8650440772057879,
-    "test_precision": 0.956333080790688,
-    "test_recall": 0.7504594097935359,
-    "test_f1": 0.8409799824354199,
-    "test_roc_auc": 0.9172712887062409,
-    "test_pr_auc": 0.9334775974374389,
-    "sanity_acc": 0.7272727272727273
+    "val_accuracy": 0.7431157694140067,
+    "val_precision": 0.7813613684960798,
+    "val_recall": 0.38991641472523564,
+    "val_f1": 0.5202277850278799,
+    "val_roc_auc": 0.7892467074304143,
+    "val_pr_auc": 0.7187261976518555,
+    "test_accuracy": 0.7872214654707137,
+    "test_precision": 0.9014372103981779,
+    "test_recall": 0.6203653659063885,
+    "test_f1": 0.7349447734912758,
+    "test_roc_auc": 0.8685469628843755,
+    "test_pr_auc": 0.8842602016822022,
+    "sanity_acc": 0.95
   }
 }
