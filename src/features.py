@@ -140,3 +140,9 @@ def extract_domain_features(url: str) -> dict:
         "num_suspicious_words": sum(w in host for w in _WORDS),
         "is_free_hosting": int(reg in FREE_HOSTING),
     }
+
+FEATURE_FUNCTIONS = {
+    "full_url": extract_features,
+    "host_only": extract_host_features,
+    "registered_domain": extract_domain_features,
+}
