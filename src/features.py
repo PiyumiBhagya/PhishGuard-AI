@@ -106,3 +106,37 @@ def extract_host_features(url: str) -> dict:
         "entropy": _entropy(host),
         "num_suspicious_words": sum(w in host for w in _WORDS),
     }
+
+# Public hosting platforms that anyone can use for free. Phishing pages are
+# often published here, so "is the registered domain one of these" is a signal.
+FREE_HOSTING = {
+    "weeblysite.com", "firebaseapp.com", "web.app", "workers.dev", "pages.dev",
+    "repl.co", "netlify.app", "herokuapp.com", "glitch.me", "000webhostapp.com",
+    "wixsite.com", "blogspot.com", "github.io", "vercel.app",
+}
+
+
+def extract_domain_features(url: str) -> dict:
+    """Features from the registered domain only (subdomains removed)."""
+    host = canonical_host(url)
+    ext = _EXTRACT(host)
+    tld = ext.suffix.rsplit(".", 1)[-1] if ext.suffix else ""
+    reg = f"{ext.domain}.{ext.suffix}" if ext.domain and ext.suffix else host
+    n = max(len(reg), 1)
+    digits = sum(ch.isdigit() for ch in reg)
+    letters = sum(ch.isalpha() for ch in reg)
+    return {
+        "reg_length": len(reg),
+        "domain_label_length": len(ext.domain),
+        "tld_length": len(tld),
+        "tld": tld,
+        "is_ip": int(bool(_IP_RE.match(host))),
+        "num_digits": digits,
+        "digit_ratio": digits / n,
+        "letter_ratio": letters / n,
+        "num_hyphens": reg.count("-"),
+        "has_punycode": int("xn--" in host),
+        "entropy": _entropy(reg),
+        "num_suspicious_words": sum(w in host for w in _WORDS),
+        "is_free_hosting": int(reg in FREE_HOSTING),
+    }

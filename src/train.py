@@ -22,10 +22,14 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 from src.data import RAW_PATH, load_clean, split
-from src.features import extract_features, extract_host_features
+from src.features import extract_domain_features, extract_features, extract_host_features
 
-FEATURE_SETS = {"full_url": extract_features, "host_only": extract_host_features}
-PRODUCTION_SET = "host_only"  # the model the API will serve
+FEATURE_SETS = {
+    "full_url": extract_features,
+    "host_only": extract_host_features,
+    "registered_domain": extract_domain_features,
+}
+PRODUCTION_SET = "registered_domain"  # the model the API will serve
 MODELS_DIR = Path("models")
 TMP_DIR = Path("data/processed")  # git-ignored scratch folder
 
@@ -51,6 +55,15 @@ SANITY = [
     ("https://appleid-confirm-0utlook.firebaseapp.com/", 1),
     ("http://secure-update-account.top/login?user=1", 1),
     ("http://xn--paypa1-9ve.com/verify", 1),
+    ("https://mail.google.com/mail/u/0/", 0),
+    ("https://support.apple.com/en-us/HT201", 0),
+    ("https://aws.amazon.com/s3/", 0),
+    ("https://developer.mozilla.org/en-US/docs/Web", 0),
+    ("https://www.bbc.co.uk/news", 0),
+    ("https://secure-paypal-login.netlify.app/", 1),
+    ("http://amazon-account-verify.xyz/signin", 1),
+    ("https://bit-coin-giveaway.pages.dev/", 1),
+    ("http://dhl-parcel-track.ru/confirm.php", 1),
 ]
 
 

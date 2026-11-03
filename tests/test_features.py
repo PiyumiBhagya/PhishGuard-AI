@@ -1,4 +1,9 @@
-from src.features import canonical_host, extract_features, extract_host_features
+from src.features import (
+    canonical_host,
+    extract_domain_features,
+    extract_features,
+    extract_host_features,
+)
 
 
 def test_basic_https_url():
@@ -41,3 +46,13 @@ def test_host_features_ignore_scheme_www_and_path():
 
 def test_host_features_empty():
     assert extract_host_features("")["host_length"] == 0
+
+def test_domain_features_ignore_subdomain():
+    a = extract_domain_features("https://en.wikipedia.org/wiki/X")
+    b = extract_domain_features("http://wikipedia.org")
+    assert a == b
+
+
+def test_free_hosting_flag():
+    assert extract_domain_features("https://abc.netlify.app/")["is_free_hosting"] == 1
+    assert extract_domain_features("https://github.com/x")["is_free_hosting"] == 0
