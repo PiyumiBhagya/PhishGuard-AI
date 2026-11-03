@@ -1,5 +1,6 @@
-import pandas as pd
 from urllib.parse import urlparse
+
+import pandas as pd
 
 df = pd.read_csv("data/raw/phiusil.csv", usecols=["URL", "label"])
 df = df.drop_duplicates(subset="URL")
