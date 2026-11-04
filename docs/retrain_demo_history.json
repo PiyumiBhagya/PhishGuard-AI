@@ -1,0 +1,38 @@
+[
+  {
+    "time": "2026-11-04T05:35:01.874963+00:00",
+    "from_version": "v1",
+    "to_version": "v2",
+    "promoted": true,
+    "dry_run": false,
+    "reason": "promoted: recent-traffic F1 0.567 -> 0.708, holdout F1 0.520 -> 0.524",
+    "champion": {
+      "holdout_accuracy": 0.7431157694140067,
+      "holdout_precision": 0.7813613684960798,
+      "holdout_recall": 0.38991641472523564,
+      "holdout_f1": 0.5202277850278799,
+      "holdout_roc_auc": 0.7892467074304143,
+      "holdout_pr_auc": 0.7187261976518555,
+      "recent_accuracy": 0.5684523809523809,
+      "recent_precision": 0.8962264150943396,
+      "recent_recall": 0.4148471615720524,
+      "recent_f1": 0.5671641791044776,
+      "recent_roc_auc": 0.7377668040648084,
+      "recent_pr_auc": 0.863752127112533
+    },
+    "challenger": {
+      "holdout_accuracy": 0.7387327298713673,
+      "holdout_precision": 0.7504976775049768,
+      "holdout_recall": 0.4022763649297528,
+      "holdout_f1": 0.5237929836748871,
+      "holdout_roc_auc": 0.7793748222875004,
+      "holdout_pr_auc": 0.7068644035225384,
+      "recent_accuracy": 0.6755952380952381,
+      "recent_precision": 0.9166666666666666,
+      "recent_recall": 0.5764192139737991,
+      "recent_f1": 0.707774798927614,
+      "recent_roc_auc": 0.8562624984695753,
+      "recent_pr_auc": 0.9246827980607306
+    }
+  }
+]
