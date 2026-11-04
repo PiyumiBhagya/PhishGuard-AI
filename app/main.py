@@ -25,12 +25,16 @@ MAX_URL_LENGTH = 2048
 app = FastAPI(title="PhishGuard API", version="0.2.0")
 
 _bundle = None
+_bundle_mtime = None
 
 
 def get_bundle() -> dict:
-    global _bundle
-    if _bundle is None:
+    """Load the model; load it again when champion.joblib was replaced (after a retrain)."""
+    global _bundle, _bundle_mtime
+    mtime = MODEL_PATH.stat().st_mtime
+    if _bundle is None or mtime != _bundle_mtime:
         _bundle = joblib.load(MODEL_PATH)
+        _bundle_mtime = mtime
     return _bundle
 
 
