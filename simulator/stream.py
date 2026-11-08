@@ -70,7 +70,7 @@ def main():
     args = ap.parse_args()
 
     try:
-        requests.get(f"{args.api}/health", timeout=5).raise_for_status()
+        requests.get(f"{args.api}/health", timeout=90).raise_for_status()
     except requests.RequestException:
         sys.exit(f"API not reachable at {args.api}. Start it first: uvicorn app.main:app")
 
