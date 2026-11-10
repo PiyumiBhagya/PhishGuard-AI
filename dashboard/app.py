@@ -3,6 +3,7 @@
 Run from the repo root:   streamlit run dashboard/app.py
 """
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -11,6 +12,14 @@ import streamlit as st
 from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+# On Streamlit Community Cloud the database URL comes from the app's Secrets.
+# app.db reads DATABASE_URL when it is imported, so set it before that import.
+try:
+    if "DATABASE_URL" in st.secrets:
+        os.environ["DATABASE_URL"] = st.secrets["DATABASE_URL"]
+except Exception:  # no secrets file when running locally
+    pass
 
 from app.db import engine  # noqa: E402
 from src.drift import (  # noqa: E402
@@ -116,6 +125,8 @@ else:
 st.divider()
 st.subheader(f"Trends ({bucket} predictions per point, oldest on the left)")
 metrics = bucketed_metrics(history, bucket)
+if len(history) % bucket and len(metrics) > 1:
+    metrics = metrics.iloc[:-1]  # the last bucket is incomplete, its numbers are noise
 a, b = st.columns(2)
 with a:
     st.caption("Recall and accuracy on labelled rows")
