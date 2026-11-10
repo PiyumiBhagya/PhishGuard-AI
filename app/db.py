@@ -64,6 +64,24 @@ def log_prediction(*, request_id, url, features, probability, verdict,
         ))
         s.commit()
 
+def log_predictions(rows: list[dict]) -> None:
+    """Log many predictions in ONE transaction (one network round trip to the database)."""
+    now = datetime.now(timezone.utc)
+    with Session(engine) as s:
+        s.add_all([
+            Prediction(
+                request_id=r["request_id"],
+                created_at=now,
+                url=r["url"],
+                features_json=json.dumps(r["features"]),
+                probability=r["probability"],
+                verdict=r["verdict"],
+                model_version=r["model_version"],
+                latency_ms=r["latency_ms"],
+            )
+            for r in rows
+        ])
+        s.commit()
 
 def set_feedback(request_id: str, true_label: int) -> bool:
     with Session(engine) as s:

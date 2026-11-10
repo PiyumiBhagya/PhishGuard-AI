@@ -11,7 +11,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from app.db import init_db, log_prediction, set_feedback, stats
+from app.db import init_db, log_predictions, set_feedback, stats
 from src.features import FEATURE_FUNCTIONS
 
 logger = logging.getLogger("phishguard")
@@ -83,24 +83,23 @@ class FeedbackRequest(BaseModel):
     true_label: int = Field(ge=0, le=1)  # 1 = phishing, 0 = legitimate
 
 
-def respond(url: str, features: dict, p: float, started: float) -> dict:
-    result = {
+def build_result(url: str, p: float, latency_ms: float) -> dict:
+    return {
         "request_id": str(uuid.uuid4()),
         "url": url,
         "probability": round(p, 4),
         "verdict": risk_verdict(p),
         "model_version": get_model_info().get("model_version", "unknown"),
-        "latency_ms": round((time.perf_counter() - started) * 1000, 2),
+        "latency_ms": round(latency_ms, 2),
     }
-    try:  # a logging problem must never break a prediction
-        log_prediction(
-            request_id=result["request_id"], url=url, features=features,
-            probability=result["probability"], verdict=result["verdict"],
-            model_version=result["model_version"], latency_ms=result["latency_ms"],
-        )
+
+
+def save(results: list[dict], features: list[dict]) -> None:
+    """Log the predictions in one transaction. A logging problem must never break a prediction."""
+    try:
+        log_predictions([{**r, "features": f} for r, f in zip(results, features)])
     except Exception:
-        logger.exception("could not log prediction")
-    return result
+        logger.exception("could not log predictions")
 
 
 @app.get("/health")
@@ -120,7 +119,9 @@ def model_info():
 def predict(req: PredictRequest):
     started = time.perf_counter()
     probs, feats = score([req.url])
-    return respond(req.url, feats[0], probs[0], started)
+    result = build_result(req.url, probs[0], (time.perf_counter() - started) * 1000)
+    save([result], feats)
+    return result
 
 
 @app.post("/predict/batch")
@@ -129,7 +130,10 @@ def predict_batch(req: BatchRequest):
         raise HTTPException(status_code=422, detail="Every URL must be 1-2048 characters.")
     started = time.perf_counter()
     probs, feats = score(req.urls)
-    return {"results": [respond(u, f, p, started) for u, f, p in zip(req.urls, feats, probs)]}
+    per_row_ms = (time.perf_counter() - started) * 1000 / len(req.urls)
+    results = [build_result(u, p, per_row_ms) for u, p in zip(req.urls, probs)]
+    save(results, feats)
+    return {"results": results}
 
 
 @app.post("/feedback")
