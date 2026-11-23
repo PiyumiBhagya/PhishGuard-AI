@@ -1,4 +1,5 @@
 """PhishGuard API: URL in, phishing risk out. Every prediction is logged."""
+import io
 import json
 import logging
 import os
@@ -12,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from app.db import init_db, log_predictions, set_feedback, stats
+from app.registry import newer_than
 from src.features import FEATURE_FUNCTIONS
 
 logger = logging.getLogger("phishguard")
@@ -21,27 +23,53 @@ METRICS_PATH = MODEL_PATH.with_name("champion_metrics.json")
 RISK_LOW = float(os.getenv("RISK_LOW", "0.4"))
 RISK_HIGH = float(os.getenv("RISK_HIGH", "0.7"))
 MAX_URL_LENGTH = 2048
+REGISTRY_CHECK_SECONDS = int(os.getenv("REGISTRY_CHECK_SECONDS", "120"))
 
 app = FastAPI(title="PhishGuard API", version="0.2.0")
 
 _bundle = None
 _bundle_mtime = None
+_info_override = None  # model info of a champion that was loaded from the registry
+_registry_checked_at = -1e9
+
+
+def get_model_info() -> dict:
+    if _info_override is not None:
+        return _info_override
+    if METRICS_PATH.exists():
+        return json.loads(METRICS_PATH.read_text())
+    return {"model_version": "unknown"}
+
+
+def sync_registry() -> None:
+    """At most every few minutes: load a newer champion from the registry, if there is one."""
+    global _bundle, _info_override, _registry_checked_at
+    now = time.monotonic()
+    if now - _registry_checked_at < REGISTRY_CHECK_SECONDS:
+        return
+    _registry_checked_at = now
+    try:
+        newer = newer_than(get_model_info().get("model_version", "v0"))
+        if newer is None:
+            return
+        version, info, artifact = newer
+        _bundle = joblib.load(io.BytesIO(artifact))
+        _info_override = info
+        logger.info("loaded model %s from the registry", version)
+    except Exception:
+        logger.exception("model registry check failed")
 
 
 def get_bundle() -> dict:
-    """Load the model; load it again when champion.joblib was replaced (after a retrain)."""
-    global _bundle, _bundle_mtime
+    """Load the model. Reload when champion.joblib was replaced, or when the registry has a newer one."""
+    global _bundle, _bundle_mtime, _info_override
     mtime = MODEL_PATH.stat().st_mtime
     if _bundle is None or mtime != _bundle_mtime:
         _bundle = joblib.load(MODEL_PATH)
         _bundle_mtime = mtime
+        _info_override = None
+    sync_registry()
     return _bundle
-
-
-def get_model_info() -> dict:
-    if METRICS_PATH.exists():
-        return json.loads(METRICS_PATH.read_text())
-    return {"model_version": "unknown"}
 
 
 def risk_verdict(p: float) -> str:
@@ -109,6 +137,7 @@ def health():
 
 @app.get("/model-info")
 def model_info():
+    get_bundle()  # also checks the registry for a newer model
     return {
         **get_model_info(),
         "thresholds": {"legitimate_below": RISK_LOW, "phishing_from": RISK_HIGH},

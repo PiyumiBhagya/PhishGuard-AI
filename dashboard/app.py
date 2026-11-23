@@ -83,7 +83,7 @@ baseline = baseline_recall()
 info = champion_info()
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("Model version", info.get("model_version", "unknown"))
+c1.metric("Model version", str(history["model_version"].iloc[-1]))
 c2.metric("Predictions logged", f"{len(history):,}")
 c3.metric("Labelled", f"{int(history['true_label'].notna().sum()):,}")
 c4.metric("Flagged phishing (window)", f"{(recent['probability'] >= 0.5).mean():.0%}")

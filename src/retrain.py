@@ -4,7 +4,9 @@
     python -m src.retrain --dry-run   # same, but never replace the champion
     python -m src.retrain --if-drift  # only when src.drift reports drift or a performance alert
 """
+
 import argparse
+import io
 import json
 import os
 from datetime import datetime, timezone
@@ -85,6 +87,22 @@ def _write_history(entry: dict) -> None:
     history.append(entry)
     HISTORY_PATH.write_text(json.dumps(history, indent=2))
 
+def load_champion() -> tuple[dict, dict]:
+    """The champion that is live: the registry's newest model if it is newer than the file in the repo."""
+    import joblib
+
+    info = json.loads(METRICS_PATH.read_text()) if METRICS_PATH.exists() else {}
+    try:
+        from app.registry import newer_than
+
+        newer = newer_than(info.get("model_version", "v1"))
+    except Exception as exc:  # no database reachable: fall back to the model file
+        print(f"note: could not read the model registry ({exc})")
+        newer = None
+    if newer is None:
+        return joblib.load(CHAMPION_PATH), info
+    _, newer_info, artifact = newer
+    return joblib.load(io.BytesIO(artifact)), newer_info
 
 def retrain(dry_run: bool = False) -> dict:
     import joblib
@@ -92,7 +110,7 @@ def retrain(dry_run: bool = False) -> dict:
 
     from src.train import evaluate, make_pipeline  # heavy imports only when really retraining
 
-    bundle = joblib.load(CHAMPION_PATH)
+    bundle, current = load_champion()
     cols = bundle["feature_columns"]
 
     logs = load_labelled_logs()
@@ -133,7 +151,7 @@ def retrain(dry_run: bool = False) -> dict:
         scores["champion"]["recent_f1"], scores["challenger"]["recent_f1"],
     )
 
-    current = json.loads(METRICS_PATH.read_text()) if METRICS_PATH.exists() else {}
+    
     old_version = current.get("model_version", "v1")
     new_version = next_version(old_version)
     now = datetime.now(timezone.utc).isoformat()
@@ -166,6 +184,14 @@ def retrain(dry_run: bool = False) -> dict:
             "trained_on": {"original_rows": len(X_orig), "logged_rows": len(X_log)},
             "metrics": metrics,
         }, indent=2))
+
+        try:  # publish to the registry: the live API loads the new model without a redeploy
+            from app.registry import publish
+
+            publish(new_version, METRICS_PATH.read_text(), CHAMPION_PATH.read_bytes())
+            print(f"published {new_version} to the model registry")
+        except Exception as exc:
+            print(f"warning: could not publish {new_version} to the registry: {exc}")
 
     entry = {"time": now, "from_version": old_version,
              "to_version": new_version if promote and not dry_run else old_version,
